@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from api.dct import (
+from dct import (
     encode_message_from_base64,
     extract_message_from_base64,
     image_to_base64,
