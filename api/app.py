@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
+import os
 from dct import (
     encode_message_from_base64,
     extract_message_from_base64,
@@ -11,16 +12,13 @@ from io import BytesIO
 from PIL import Image
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Configure CORS more securely for production
+CORS(app, resources={r"/*": {"origins": os.environ.get("ALLOWED_ORIGINS", "*")}})
 
 
 @app.route('/', methods=['GET'])
-def health_check():
-    """Simple endpoint to check if API is running"""
-    return jsonify({
-        'status': 'success',
-        'message': 'API is running'
-    })
+def home():
+    return 'Hello, this is api for dct stegano by adty!'
 
 @app.route('/encode', methods=['POST'])
 def encode():
@@ -30,9 +28,6 @@ def encode():
     Request:
     - image: File gambar (multipart/form-data)
     - message: Pesan yang akan disisipkan (form-data)
-    
-    Response:
-    - encoded_image: Gambar hasil encoding dalam format base64
     """
     try:
         # Cek apakah file gambar dan pesan ada dalam request
@@ -55,29 +50,23 @@ def encode():
         # Encode pesan ke dalam gambar
         encoded_image = encode_message_from_base64(image_base64, message)
         
-        
         return jsonify({
             'status': 'success',
             'encoded_image': encoded_image
         })
         
     except Exception as e:
-        print(f"Error in encode endpoint: {str(e)}")
+        error_msg = str(e)
+        print(f"Error in encode endpoint: {error_msg}")
         return jsonify({
             'error': 'Encoding failed',
-            'message': str(e)
+            'message': error_msg
         }), 500
 
 @app.route('/decode', methods=['POST'])
 def decode():
     """
     Endpoint untuk mengekstrak pesan dari gambar yang telah disisipi
-    
-    Request:
-    - image: File gambar yang telah disisipi pesan (multipart/form-data)
-    
-    Response:
-    - message: Pesan yang berhasil diekstrak
     """
     try:
         # Cek apakah file gambar ada dalam request
@@ -105,10 +94,9 @@ def decode():
         })
         
     except Exception as e:
+        error_msg = str(e)
+        print(f"Error in decode endpoint: {error_msg}")
         return jsonify({
             'error': 'Decoding failed',
-            'message': str(e)
+            'message': error_msg
         }), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
