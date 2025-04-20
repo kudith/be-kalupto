@@ -100,3 +100,20 @@ def decode():
             'error': 'Decoding failed',
             'message': error_msg
         }), 500
+
+# This is the crucial part for Vercel serverless deployment
+def handler(request):
+    """WSGI handler for Vercel"""
+    return app(request)
+
+# Add this line to make the app compatible with Vercel serverless
+from flask import request as flask_request
+@app.before_request
+def log_request_info():
+    """Log request info for debugging"""
+    print('Headers: %s', flask_request.headers)
+    print('Body: %s', flask_request.get_data())
+
+# For local development
+if __name__ == '__main__':
+    app.run(debug=True)
