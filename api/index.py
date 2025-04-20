@@ -1,23 +1,43 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-# Change this import to use a relative import
-from .dct import (
-    encode_message_from_base64,
-    extract_message_from_base64,
-    image_to_base64,
-    base64_to_image
-)
 import base64
 from io import BytesIO
 from PIL import Image
+import sys
+import logging
 
-# Rest of your code remains unchanged
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+# Import locally but handle potential import errors
+try:
+    from api.dct import (
+        encode_message_from_base64,
+        extract_message_from_base64,
+        image_to_base64,
+        base64_to_image
+    )
+except ImportError:
+    try:
+        from .dct import (
+            encode_message_from_base64,
+            extract_message_from_base64,
+            image_to_base64,
+            base64_to_image
+        )
+    except ImportError:
+        # Fallback to direct import for local development
+        from dct import (
+            encode_message_from_base64,
+            extract_message_from_base64,
+            image_to_base64,
+            base64_to_image
+        )
 
 app = Flask(__name__)
-# Configure CORS more securely for production
+# Configure CORS
 CORS(app, resources={r"/*": {"origins": os.environ.get("ALLOWED_ORIGINS", "*")}})
-
 
 @app.route('/', methods=['GET'])
 def home():
@@ -26,7 +46,7 @@ def home():
 @app.route('/encode', methods=['POST'])
 def encode():
     """
-    Endpoint untuk menyisipkan pesan ke dalam gambar menggunakan SVD
+    Endpoint untuk menyisipkan pesan ke dalam gambar menggunakan DCT
     
     Request:
     - image: File gambar (multipart/form-data)
@@ -60,7 +80,7 @@ def encode():
         
     except Exception as e:
         error_msg = str(e)
-        print(f"Error in encode endpoint: {error_msg}")
+        app.logger.error(f"Error in encode endpoint: {error_msg}")
         return jsonify({
             'error': 'Encoding failed',
             'message': error_msg
@@ -98,25 +118,15 @@ def decode():
         
     except Exception as e:
         error_msg = str(e)
-        print(f"Error in decode endpoint: {error_msg}")
+        app.logger.error(f"Error in decode endpoint: {error_msg}")
         return jsonify({
             'error': 'Decoding failed',
             'message': error_msg
         }), 500
 
-# This is the crucial part for Vercel serverless deployment
-def handler(request):
-    """WSGI handler for Vercel"""
-    return app(request)
-
-# Add this line to make the app compatible with Vercel serverless
-from flask import request as flask_request
-@app.before_request
-def log_request_info():
-    """Log request info for debugging"""
-    print('Headers: %s', flask_request.headers)
-    print('Body: %s', flask_request.get_data())
-
 # For local development
 if __name__ == '__main__':
     app.run(debug=True)
+
+# The Flask app object is what Vercel will use
+# No special handler function is needed
