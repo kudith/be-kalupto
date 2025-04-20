@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import os
-from dct import (
+# Change this import to use a relative import
+from .dct import (
     encode_message_from_base64,
     extract_message_from_base64,
     image_to_base64,
@@ -10,6 +11,8 @@ from dct import (
 import base64
 from io import BytesIO
 from PIL import Image
+
+# Rest of your code remains unchanged
 
 app = Flask(__name__)
 # Configure CORS more securely for production
