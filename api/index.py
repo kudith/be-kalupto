@@ -124,6 +124,109 @@ def decode():
             'message': error_msg
         }), 500
 
+import requests  # Add this import
+
+# Add a new route that accepts URLs instead of files
+@app.route('/encode-url', methods=['POST'])
+def encode_url():
+    """
+    Endpoint for steganography using image URLs instead of direct uploads
+    
+    Request:
+    - imageUrl: URL of the image to process
+    - message: Message to encode
+    """
+    try:
+        # Parse JSON data from request
+        data = request.json
+        
+        if not data or 'imageUrl' not in data or 'message' not in data:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'Image URL and message are required'
+            }), 400
+        
+        image_url = data['imageUrl']
+        message = data['message']
+        
+        # Download image from URL
+        response = requests.get(image_url)
+        if response.status_code != 200:
+            return jsonify({
+                'error': 'Failed to download image',
+                'message': f'HTTP status code: {response.status_code}'
+            }), 400
+        
+        # Process the downloaded image
+        image = Image.open(BytesIO(response.content))
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+        # Encode message into image
+        encoded_image = encode_message_from_base64(image_base64, message)
+        
+        return jsonify({
+            'status': 'success',
+            'encoded_image': encoded_image
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        app.logger.error(f"Error in encode_url endpoint: {error_msg}")
+        return jsonify({
+            'error': 'Encoding failed',
+            'message': error_msg
+        }), 500
+
+
+@app.route('/decode-url', methods=['POST'])
+def decode_url():
+    """
+    Endpoint for extracting a message from an image URL
+    """
+    try:
+        data = request.json
+        
+        if not data or 'imageUrl' not in data:
+            return jsonify({
+                'error': 'Missing required field',
+                'message': 'Image URL is required'
+            }), 400
+        
+        image_url = data['imageUrl']
+        
+        # Download image from URL
+        response = requests.get(image_url)
+        if response.status_code != 200:
+            return jsonify({
+                'error': 'Failed to download image',
+                'message': f'HTTP status code: {response.status_code}'
+            }), 400
+        
+        # Process the downloaded image
+        image = Image.open(BytesIO(response.content))
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+        # Extract message from image
+        message = extract_message_from_base64(image_base64)
+        
+        return jsonify({
+            'status': 'success',
+            'message': message
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        app.logger.error(f"Error in decode_url endpoint: {error_msg}")
+        return jsonify({
+            'error': 'Decoding failed',
+            'message': error_msg
+        }), 500
+
+
 # For local development
 if __name__ == '__main__':
     app.run(debug=True)
